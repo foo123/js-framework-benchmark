@@ -25,20 +25,20 @@ const buildData = (count) => {
 };
 
 const Row = new ModelView.View.Component('Row', `
-<tr mv-id={props.id} id={props.id} class={props.selected ? 'danger' : ''}>
-<td class="col-md-1">{props.id}</td>
-<td class="col-md-4"><a mv-evt mv-on-click="SELECT">{props.label}</a></td>
+<tr mv-id={props.item.id} id={props.item.id} class={props.selected ? 'danger' : ''}>
+<td class="col-md-1">{props.item.id}</td>
+<td class="col-md-4"><a mv-evt mv-on-click="SELECT">{props.item.label}</a></td>
 <td class="col-md-1"><a mv-evt mv-on-click="REMOVE"><span class="glyphicon glyphicon-remove" aria-hidden="true"/></a></td>
 <td class="col-md-6"/>
 </tr>
 `, {
-    changed: (oldProps, newProps, prevIndex, newIndex) => (oldProps.id !== newProps.id) || (oldProps.label !== newProps.label) || (oldProps.selected !== newProps.selected) || (prevIndex !== newIndex)
+    changed: (oldProps, newProps, prevIndex, newIndex) => (oldProps.item !== newProps.item) || (oldProps.selected !== newProps.selected) /*|| (prevIndex !== newIndex)*/
 });
 
 const Main = new ModelView.View('view')
     .model(new ModelView.Model('model', {data: [], selected: 0}))
     .template(`{
-    view.model().get('data').map(item => view.component('Row', item.id, {id:item.id, label:item.label, selected:item.id===view.$model.$data.selected}))
+    view.model().get('data').map(item => view.component('Row', item.id, {item:item, selected:item.id===view.$model.$data.selected}))
 }`)
     .components({
         'Row': Row
@@ -59,7 +59,8 @@ const Main = new ModelView.View('view')
         'UPDATE': function() {
             const data = this.$model.$data.data;
             for (let i = 0; i < data.length; i += 10) {
-                data[i].label += " !!!";
+                //data[i].label += " !!!";
+                data[i] = {id: data[i].id, label: data[i].label+" !!!"};
             }
             this.model().notify('data');
         },
