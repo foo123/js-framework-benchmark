@@ -25,9 +25,9 @@ const buildData = (count) => {
 };
 
 const Row = new ModelView.View.Component('Row', `
-<tr mv-id="{%=props.id%}" id="{%=props.id%}" class="{%=props.selected ? 'danger' : ''%}">
-<td class="col-md-1">{%=props.id%}</td>
-<td class="col-md-4"><a mv-evt mv-on-click="SELECT">{%=props.label%}</a></td>
+<tr mv-id={props.id} id={props.id} class={props.selected ? 'danger' : ''}>
+<td class="col-md-1">{props.id}</td>
+<td class="col-md-4"><a mv-evt mv-on-click="SELECT">{props.label}</a></td>
 <td class="col-md-1"><a mv-evt mv-on-click="REMOVE"><span class="glyphicon glyphicon-remove" aria-hidden="true"/></a></td>
 <td class="col-md-6"/>
 </tr>
@@ -37,9 +37,9 @@ const Row = new ModelView.View.Component('Row', `
 
 const Main = new ModelView.View('view')
     .model(new ModelView.Model('model', {data: [], selected: 0}))
-    .template(`{%=
+    .template(`{
     view.model().get('data').map(item => view.component('Row', item.id, {id:item.id, label:item.label, selected:item.id===view.$model.$data.selected}))
-%}`)
+}`)
     .components({
         'Row': Row
     })
@@ -87,6 +87,7 @@ const Main = new ModelView.View('view')
           const id = +tr.id;
           const idx = data.findIndex((d) => d.id === id);
           data.splice(idx, 1);
+          if (id === this.$model.$data.selected) this.$model.$data.selected = 0;
           //this.model().notify('data');
           // framework idiomatically allows that the specifics of this action can be handled faster
           // realistic use with no loss of generality
