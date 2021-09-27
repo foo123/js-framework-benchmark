@@ -38,7 +38,7 @@ const Row = new ModelView.View.Component('Row', `
 const Main = new ModelView.View('view')
     .model(new ModelView.Model('model', {data: [], selected: 0}))
     .template(`{
-    view.model().get('data').map(item => view.component('Row', item.id, {item:item, selected:item.id===view.$model.$data.selected}))
+    view.model().get('data').map(item => (<Row id={item.id} props={{item:item, selected:item.id===view.$model.$data.selected}}/>))
 }`)
     .components({
         'Row': Row
