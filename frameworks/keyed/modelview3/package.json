@@ -4,7 +4,7 @@
   "description": "ModelView demo",
   "main": "index.js",
   "js-framework-benchmark": {
-    "frameworkVersion": "3.0.0",
+    "frameworkVersion": "3.1.0",
     "issues": [
       694
     ]
