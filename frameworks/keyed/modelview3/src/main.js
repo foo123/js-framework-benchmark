@@ -17,7 +17,7 @@ const buildData = (count) => {
   for (let i = 0; i < count; i++) {
     data[i] = {
       id: nextId++,
-      label: `${A[random(A.length)]} ${C[random(C.length)]} ${N[random(N.length)]}`
+      label: A[random(A.length)]+' '+C[random(C.length)]+' '+N[random(N.length)]
     };
   }
 
@@ -53,7 +53,7 @@ const Main = new ModelView.View('view')
             this.model().set('data', buildData(10000), true);
         },
         'ADD': function() {
-            this.$model.$data.data = this.$model.$data.data.concat(buildData(1000));
+            this.$model.$data.data.push.apply(this.$model.$data.data, buildData(1000));
             this.model().notify('data');
         },
         'UPDATE': function() {
@@ -95,19 +95,19 @@ const Main = new ModelView.View('view')
           this.removeNode(tr);
         },
         'SELECT': function(evt, el) {
-            const selectedPrev = this.model().get('selected');
+            const selectedPrev = this.$model.$data.selected;
             const tr = el.closest('tr');
             const selected = +tr.id;
             // framework idiomatically allows that the specifics of this action can be handled faster
             // realistic use with no loss of generality
             if (selectedPrev !== selected)
             {
-                this.model().set('selected', selected/*, true*/);
                 if (selectedPrev)
                 {
                     const selectedRow = document.getElementById(String(selectedPrev));
                     if (selectedRow) selectedRow.classList.remove('danger');
                 }
+                this.$model.$data.selected = selected;
                 tr.classList.add('danger');
             }
         }
