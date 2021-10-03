@@ -32,7 +32,7 @@ const Row = new ModelView.View.Component('Row', `
 <td class="col-md-6"/>
 </tr>
 `, {
-    changed: (oldProps, newProps, prevIndex, newIndex) => (oldProps.item !== newProps.item) || (oldProps.selected !== newProps.selected) /*|| (prevIndex !== newIndex)*/
+    changed: (oldProps, newProps, prevIndex, newIndex) => (oldProps.item !== newProps.item) || (oldProps.selected !== newProps.selected) || (prevIndex !== newIndex)
 });
 
 const Main = new ModelView.View('view')
