@@ -24,7 +24,7 @@ const buildData = (count) => {
   return data;
 };
 
-const clone = (obj) => ({id:obj.id, label:obj.label});
+const clone = (obj) => ({id:obj.id, label:obj.label})
 
 const Row = new ModelView.View.Component('Row', `
 <tr id={props.id} class={props.id===view.$model.$data.selected ? 'danger' : ''}>
@@ -34,62 +34,63 @@ const Row = new ModelView.View.Component('Row', `
 <td class="col-md-6"/>
 </tr>
 `, {
-    changed: (oldProps, newProps, oldIndex, newIndex) => oldProps !== newProps
+    changed: (oldProps, newProps) => oldProps !== newProps
 });
 
 const Main = new ModelView.View('view')
-    .model(new ModelView.Model('model', {data: new ModelView.Model.Collection([]), selected: 0}))
+    .model(new ModelView.Model('model', {list: new ModelView.Model.Collection([]), selected: 0}))
     .template(`{
-    view.model().get('data').mapTo(item => (<Row id={item.id} props={item}/>))
+    view.model().get('list').mapTo(item => (<Row id={item.id} props={item}/>))
 }`)
     .components({
         'Row': Row
     })
     .actions({
         'RUN': function() {
-            this.$model.$data.selected = 0;
-            this.$model.$data.data.set(buildData(1000));
-            this.$model.notify('data');
+            this.model().data().selected = 0;
+            this.model().data().list.set(buildData(1000));
+            this.model().notify('list');
         },
         'RUN_LOTS': function() {
-            this.$model.$data.selected = 0;
-            this.$model.$data.data.set(buildData(10000));
-            this.$model.notify('data');
+            this.model().data().selected = 0;
+            this.model().data().list.set(buildData(10000));
+            this.model().notify('list');
         },
         'ADD': function() {
-            this.$model.$data.data.concat(buildData(1000));
-            this.$model.notify('data');
+            this.model().data().list.concat(buildData(1000));
+            this.model().notify('list');
         },
         'UPDATE': function() {
-            const data = this.$model.$data.data, items = data.items(), l = items.length;
+            const list = this.model().data().list, items = list.items(), l = items.length;
             for (let i = 0; i < l; i += 10) {
-                data.set(i, {id: items[i].id, label: items[i].label+" !!!"});
+                list.set(i, {id: items[i].id, label: items[i].label+" !!!"});
             }
-            this.$model.notify('data');
+            this.model().notify('list');
         },
         'CLEAR': function() {
-            this.$model.$data.selected = 0;
-            this.$model.$data.data.set([]);
-            this.$model.notify('data');
+            this.model().data().selected = 0;
+            this.model().data().list.set([]);
+            this.model().notify('list');
         },
         'SWAP_ROWS': function() {
-            const data = this.$model.$data.data, items = data.items();
+            const list = this.model().data().list, items = list.items();
             if (items.length > 998) {
                 const t = items[1];
-                data.set(1, clone(items[998]));
-                data.set(998, clone(t));
-                this.$model.notify('data');
+                list.set(1, clone(items[998]));
+                list.set(998, clone(t));
+                this.model().notify('list');
             }
         },
         'REMOVE': function(evt, el) {
             const tr = el.closest('tr');
             const id = +tr.id;
-            this.$model.$data.data.splice(this.$model.$data.data.items().findIndex((d) => d.id === id), 1);
-            if (id === this.$model.$data.selected) this.$model.$data.selected = 0;
-            this.$model.notify('data');
+            const list = this.model().data().list;
+            list.splice(list.items().findIndex((d) => d.id === id), 1);
+            if (id === this.model().data().selected) this.model().data().selected = 0;
+            this.model().notify('list');
         },
         'SELECT': function(evt, el) {
-            const selectedPrev = this.$model.$data.selected;
+            const selectedPrev = this.model().data().selected;
             const tr = el.closest('tr');
             const selected = +tr.id;
             // framework idiomatically allows that the specifics of this action can be handled faster
@@ -99,7 +100,7 @@ const Main = new ModelView.View('view')
                     const selectedRow = document.getElementById(String(selectedPrev));
                     if (selectedRow) selectedRow.classList.remove('danger');
                 }
-                this.$model.$data.selected = selected;
+                this.model().data().selected = selected;
                 tr.classList.add('danger');
             }
         }
