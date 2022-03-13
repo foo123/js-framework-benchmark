@@ -2,7 +2,7 @@
 *
 *   ModelView.js
 *   @version: 4.1.0
-*   @built on 2022-03-13 18:44:31
+*   @built on 2022-03-13 19:19:26
 *
 *   A simple, light-weight, versatile and fast isomorphic MVVM JavaScript framework (Browser and Server)
 *   https://github.com/foo123/modelview.js
@@ -11,7 +11,7 @@
 *
 *   ModelView.js
 *   @version: 4.1.0
-*   @built on 2022-03-13 18:44:31
+*   @built on 2022-03-13 19:19:26
 *
 *   A simple, light-weight, versatile and fast isomorphic MVVM JavaScript framework (Browser and Server)
 *   https://github.com/foo123/modelview.js
@@ -2204,7 +2204,7 @@ function morphSingle(view, r, rnode, vnode)
     }
     else if (vnode.simple)
     {
-        if (changed) update_node(view, rnode, vnode);
+        update_node(view, rnode, vnode);
     }
     else
     {
@@ -2336,9 +2336,9 @@ function morphSelectedNodes(view, r, v, start, end, end2, startv, count)
         vnode = v.childNodes[indexv];
         if (index >= k)
         {
-            l = z;//r.childNodes.length;
-            insNodes(view, r, v, indexv, end-l+1, null);
-            if (0 > count) count += end-l+1;
+            //r.childNodes.length;
+            insNodes(view, r, v, indexv, end-k+1, null);
+            if (0 > count) count += end-k+1;
             break;
         }
         if ((0 > count) && (index >= end2+count+1))
@@ -2387,9 +2387,9 @@ function morphSelectedNodes(view, r, v, start, end, end2, startv, count)
                 k -= j;
                 count -= j;
             }
-            if (index >= z/*r.childNodes.length*/)
+            if (index >= k/*r.childNodes.length*/)
             {
-                insNodes(view, r, v, indexv, end-r.childNodes.length+1, null);
+                insNodes(view, r, v, indexv, end-k+1, null);
                 count = 0;
                 break;
             }
