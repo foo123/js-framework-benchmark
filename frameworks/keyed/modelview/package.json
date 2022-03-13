@@ -1,0 +1,25 @@
+{
+  "name": "js-framework-benchmark-modelview",
+  "version": "1.0.0",
+  "description": "ModelView demo",
+  "main": "index.js",
+  "js-framework-benchmark": {
+    "frameworkVersion": "latest",
+    "issues": [
+    ]
+  },
+  "scripts": {
+    "build-dev": "exit 0",
+    "build-prod": "exit 0"
+  },
+  "keywords": [
+    "modelview"
+  ],
+  "author": "foo123",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/krausest/js-framework-benchmark",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/krausest/js-framework-benchmark.git"
+  }
+}
