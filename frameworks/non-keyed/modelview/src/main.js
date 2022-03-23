@@ -103,7 +103,7 @@ const Main = new ModelView.View('view')
         },
         'REMOVE': function(evt, el) {
             const id = +el.dataset.id;
-            const idx = /*findIndex(tr)*/list.items().findIndex(item => item.id.val() === id);
+            const idx = list.items().findIndex(item => item.id.val() === id);
             list.splice(idx, 1);
             if (this.$renderdom.children[idx] === selected) selected = null;
             this.model().notify('list');
@@ -120,10 +120,11 @@ const Main = new ModelView.View('view')
                 item = list.items()[idx];
                 item.selected.set('danger', true);
                 if (selected) {
-                    selected.classList.remove('danger');
-                    idx = findIndex(selected);
+                    id = +selected.id;
+                    idx = list.items().findIndex(item => item.id.val() === id);//findIndex(selected);
                     item = list.items()[idx];
                     item.selected.set('', true);
+                    selected.classList.remove('danger');
                 }
                 selected = tr;
             }
@@ -134,5 +135,5 @@ const Main = new ModelView.View('view')
     .livebind(true)
     .bind(['click'], document.getElementById('main'), document.getElementById('tbody'))
     .precompile()
-    .render()
+    .sync()
 ;

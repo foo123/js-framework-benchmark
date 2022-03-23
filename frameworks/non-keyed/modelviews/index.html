@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ModelView Latest Simple</title>
+  <link href="/css/currentStyle.css" rel="stylesheet"/>
+</head>
+<body>
+  <div id='main'>
+<div class="container">
+<div class="jumbotron">
+  <div class="row">
+    <div class="col-md-6">
+      <h1>ModelView Latest Simple non-keyed</h1>
+    </div>
+    <div class="col-md-6">
+      <div class="row">
+        <div class="col-sm-6 smallpad">
+          <button type="button" class="btn btn-primary btn-block" id="run" mv-evt mv-on-click="RUN">Create 1,000 rows</button>
+        </div>
+        <div class="col-sm-6 smallpad">
+          <button type="button" class="btn btn-primary btn-block" id="runlots" mv-evt mv-on-click="RUN_LOTS">Create 10,000 rows</button>
+        </div>
+        <div class="col-sm-6 smallpad">
+          <button type="button" class="btn btn-primary btn-block" id="add" mv-evt mv-on-click="ADD">Append 1,000 rows</button>
+        </div>
+        <div class="col-sm-6 smallpad">
+          <button type="button" class="btn btn-primary btn-block" id="update" mv-evt mv-on-click="UPDATE">Update every 10th row</button>
+        </div>
+        <div class="col-sm-6 smallpad">
+          <button type="button" class="btn btn-primary btn-block" id="clear" mv-evt mv-on-click="CLEAR">Clear</button>
+        </div>
+        <div class="col-sm-6 smallpad">
+          <button type="button" class="btn btn-primary btn-block" id="swaprows" mv-evt mv-on-click="SWAP_ROWS">Swap Rows</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<table class="table table-hover table-striped test-data">
+<tbody id="tbody"><!--foreach {list}-->
+<tr id="{.id}" class="{.selected}">
+<td class="col-md-1">{.id}</td>
+<td class="col-md-4"><a mv-evt mv-on-click="SELECT" data-id="{.id}">{.label}</a></td>
+<td class="col-md-1"><a mv-evt mv-on-click="REMOVE" data-id="{.id}"><span class="glyphicon glyphicon-remove" aria-hidden="true"/></a></td>
+<td class="col-md-6"></td>
+</tr>
+<!--/foreach--></tbody>
+</table>
+<span class="preloadicon glyphicon glyphicon-remove" aria-hidden="true"></span>
+</div>
+  </div>
+  <script src='src/modelview.js'></script>
+  <script src='src/main.js'></script>
+</body>
+</html>
