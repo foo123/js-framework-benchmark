@@ -2,7 +2,7 @@
 *
 *   ModelView.js
 *   @version: 5.0.0
-*   @built on 2022-03-25 15:11:46
+*   @built on 2022-03-27 20:36:45
 *
 *   A simple, light-weight, versatile and fast isomorphic MVVM JavaScript framework (Browser and Server)
 *   https://github.com/foo123/modelview.js
@@ -11,7 +11,7 @@
 *
 *   ModelView.js
 *   @version: 5.0.0
-*   @built on 2022-03-25 15:11:46
+*   @built on 2022-03-27 20:36:45
 *
 *   A simple, light-weight, versatile and fast isomorphic MVVM JavaScript framework (Browser and Server)
 *   https://github.com/foo123/modelview.js
@@ -59,6 +59,7 @@ var MV = '$MV', NAMESPACE = "modelview", mvDisplay = '--mvDisplay', WILDCARD = "
     proto = "prototype", Arr = Array, AP = Arr[proto], Regex = RegExp, Num = Number,
     Obj = Object, OP = Obj[proto], Create = Obj.create, Keys = Obj.keys, stdMath = Math,
     Func = Function, FP = Func[proto], Str = String, SP = Str[proto],
+    A32I = Int32Array || Array,
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice
     //FPCall = FP.call, hasProp = bindF(FPCall, OP.hasOwnProperty),
     toString = OP.toString, HAS = OP.hasOwnProperty, slice = AP.slice,
@@ -291,6 +292,7 @@ VNode[proto] = {
     ,simple: true
     ,uAtts: null
     ,uNodes: null
+    ,create: null
 };
 function VCode(code)
 {
@@ -650,6 +652,66 @@ function is_child_of(el, node, finalNode)
         }
     }
     return false;
+}
+var n_LIS = 0, _LIS, _LISP;
+function longest_incr_subseq(a)
+{
+    // https://en.wikipedia.org/wiki/Longest_increasing_subsequence
+    // O (n log n)
+    var aI = 0, i = 0, j = 0, k = 0, seq,
+        u = 0, v = 0, c = 0, len = a.length;
+
+    if (len > n_LIS)
+    {
+        // avoid creating arrays, if it can fit
+        n_LIS = len;
+        _LIS = new A32I(n_LIS);
+        _LISP = new A32I(n_LIS);
+    }
+
+    for (; i<len; ++i)
+    {
+        aI = a[i];
+
+        if (0 < aI)
+        {
+            j = _LIS[k];
+            if (a[j] < aI)
+            {
+                _LISP[i] = j;
+                _LIS[++k] = i;
+                continue;
+            }
+
+            u = 0;
+            v = k;
+
+            while (u < v)
+            {
+                // binary search
+                c = (u + v) >> 1;
+                if (a[_LIS[c]] < aI) u = c + 1;
+                else v = c;
+            }
+
+            if (aI < a[_LIS[u]])
+            {
+                if (0 < u) _LISP[i] = _LIS[u - 1];
+                _LIS[u] = i;
+            }
+        }
+    }
+
+    u = k + 1;
+    seq = new A32I(u);
+    v = _LIS[u - 1];
+    while (u-- > 0)
+    {
+        seq[u] = v;
+        v = _LISP[v];
+        _LIS[u] = 0;
+    }
+    return seq;
 }
 function Fragment()
 {
@@ -1017,7 +1079,7 @@ function html2ast(view, html, state, jscode)
                         component = state.dom;
                         state.dom = component.parentNode;
                         component.parentNode = null;
-                        state.dom.childNodes[state.dom.childNodes.length-1] = new VCode('view.component("'+component.nodeType.slice(1,-1)+'",'+(is_instance(attr(component, 'id'), VCode) ? attr(component, 'id').code : toJSON(attr(component, 'id')))+','+(is_instance(attr(component, 'props'), VCode) ? attr(component, 'props').code : toJSON(attr(component, 'props')))+',[])');
+                        state.dom.childNodes[state.dom.childNodes.length-1] = new VCode('view.component("'+component.nodeType.slice(1,-1)+'",'+(is_instance(attr(component, 'id'), VCode) ? attr(component, 'id').code : toJSON(attr(component, 'id')))+','+(is_instance(attr(component, 'data'), VCode) ? attr(component, 'data').code : toJSON(attr(component, 'data')))+',[])');
                         component = null;
                     }
                     else
@@ -1159,7 +1221,7 @@ function html2ast(view, html, state, jscode)
                             component = state.dom;
                             state.dom = component.parentNode;
                             component.parentNode = null;
-                            state.dom.childNodes[state.dom.childNodes.length-1] = new VCode('view.component("'+component.nodeType.slice(1,-1)+'",'+(is_instance(attr(component, 'id'), VCode) ? attr(component, 'id').code : toJSON(attr(component, 'id')))+','+(is_instance(attr(component, 'props'), VCode) ? attr(component, 'props').code : toJSON(attr(component, 'props')))+','+(component.childNodes.length ? to_code(component)+'.childNodes' : '[]')+')');
+                            state.dom.childNodes[state.dom.childNodes.length-1] = new VCode('view.component("'+component.nodeType.slice(1,-1)+'",'+(is_instance(attr(component, 'id'), VCode) ? attr(component, 'id').code : toJSON(attr(component, 'id')))+','+(is_instance(attr(component, 'data'), VCode) ? attr(component, 'data').code : toJSON(attr(component, 'data')))+','+(component.childNodes.length ? to_code(component)+'.childNodes' : '[]')+')');
                             component = null;
                         }
                         else
@@ -1371,7 +1433,7 @@ function insMod(nodes, start, end, new_mod)
     }
     return new_mod;
 }
-function insDiff(node, start, end, new_diff)
+/*function insDiff(node, start, end, new_diff)
 {
     if (end.map)
     {
@@ -1409,8 +1471,8 @@ function insDiff(node, start, end, new_diff)
             node.diff[node.diff.length-1][1] = end;
     }
     return new_diff;
-}
-function htmlNode(view, nodeType, id, type, atts, children, value2, modified)
+}*/
+function htmlNode(view, nodeType, id, type, atts, children, value2, modified, create)
 {
     if (
         // idempotent shortcut
@@ -1428,6 +1490,7 @@ function htmlNode(view, nodeType, id, type, atts, children, value2, modified)
     if (is_instance(type, Value)) type = type.val();
     node.id = null == id ? null : Str(id);
     node.type = null == type ? null : Str(type);
+    node.create = create || null;
     node.attributes = atts || [];
     if (modified)
     {
@@ -1570,7 +1633,7 @@ function htmlNode(view, nodeType, id, type, atts, children, value2, modified)
                 if (!node.modified) node.modified = {atts: [], nodes: []};
                 new_mod = insMod(node.modified.nodes, index, index+n.childNodes.length-1, new_mod);
                 //if (n.diff) new_diff = insDiff(node, index, n.diff, new_diff);
-                /*else*/ if (n.changed) new_diff = insDiff(node, index, index+n.childNodes.length-1, new_diff);
+                /*else*/ /*if (n.changed) new_diff = insDiff(node, index, index+n.childNodes.length-1, new_diff);*/
                 node.changed = node.changed || n.changed;
                 if (!n.simple)
                 {
@@ -1737,6 +1800,45 @@ function htmlNode(view, nodeType, id, type, atts, children, value2, modified)
     }
     return node;
 }
+function create_att(name, value, isSVG, isCode)
+{
+    var out = 'val='+value+';'
+    if (isCode)
+    {
+        out += 'if(val instanceof Value){if(val.changed()&&val.id()){view.$reset[val.id()]=val;}val=val.val();}'
+    }
+
+    out += 'if(false!==val){';
+
+    if (-1 !== ['selected','disabled','required','checked','autoFocus','allowfullscreen','autoplay','capture','controls','default','hidden','indeterminate','loop','muted','novalidate','open','readOnly','reversed','scoped','seamless'].indexOf(name))
+    {
+        out += 'r.'+name+'=!!val;';
+    }
+    else if ('class' === name)
+    {
+        out += isSVG ? 'r.setAttribute("class",String(val));' : 'r.className=String(val);';
+    }
+    else if ('style' === name)
+    {
+        out += 'r.style.cssText=String(val);';
+    }
+    else if ('id' === name)
+    {
+        out += 'r.id=String(val);';
+    }
+    else if ('value' === name)
+    {
+        out += 'r.value=val;';
+    }
+    else
+    {
+        out += 'r.setAttribute("'+name+'",true===val?"'+name+'":String(val));';
+    }
+
+    out += '}';
+
+    return out;
+}
 function to_code(vnode/*, with_modified*/)
 {
     var out = '_$$_(view, "", null, null, [], [])', T = vnode.nodeType/*, mod = 0*/;
@@ -1757,18 +1859,22 @@ function to_code(vnode/*, with_modified*/)
         }
         else
         {
-            var modifiedAtts = [];
-            out = '_$$_(view, "'+(svgElements[T] ? T : lower(T))+'", '+Str(vnode.id)+', '+Str(vnode.type)+', ['+vnode.attributes.map(function(a, i){
-                if (is_instance(a.value, VCode))
+            var isSVG = svgElements[T], modifiedAtts = [],
+                createNode = (isSVG ? 'r=document.createElementNS("http://www.w3.org/2000/svg","'+T.slice(1,-1)+'");' : 'r=document.createElement("'+T.slice(1,-1)+'");') + 'if(true===with_meta){r.$MV=rmv=MV0();if(v.id||v.component||v.modified){rmv.id=v.id;rmv.comp=v.component;if(rmv.comp){if(rmv.comp.dom&&rmv.comp.dom.$MV)rmv.comp.dom.$MV.comp=null;rmv.comp.dom=r;}if(v.modified){if(v.modified.atts.length)rmv.att=v.modified.atts;if(v.modified.nodes.length)rmv.mod=v.modified.nodes;}}}';
+            out = '_$$_(view, "'+(isSVG ? T : lower(T))+'", '+Str(vnode.id)+', '+Str(vnode.type)+', ['+vnode.attributes.map(function(a, i){
+                var val = a.value;
+                if (is_instance(val, VCode))
                 {
                     if (!modifiedAtts.length || modifiedAtts[modifiedAtts.length-1].to < i-1)
                         modifiedAtts.push({from:i, to:i});
                     else
                         modifiedAtts[modifiedAtts.length-1].to = i;
-                    return '{name:"'+a.name+'",value:('+a.value.code+')}';
+                    createNode += create_att(a.name, 'v.attributes['+i+'].value', isSVG, true);
+                    return '{name:"'+a.name+'",value:('+val.code+')}';
                 }
-                return '{name:"'+a.name+'",value:'+toJSON(a.value)+'}';
-            }).join(',')+'], ['+vnode.childNodes.map(to_code).join(',')+'], null, {atts:'+toJSON(modifiedAtts)+'})';
+                createNode += create_att(a.name, val = toJSON(val), isSVG, false);
+                return '{name:"'+a.name+'",value:'+val+'}';
+            }).join(',')+'], ['+vnode.childNodes.map(to_code).join(',')+'], null, {atts:'+toJSON(modifiedAtts)+'},function(view,v,with_meta,Value,MV0){var r,val,rmv;'+createNode+'return r;})';
         }
     }
     else if (vnode.childNodes.length)
@@ -1848,67 +1954,74 @@ function to_node(view, vnode, with_meta)
     }
     else
     {
-        // createElement is faster than innerHTML in wrapper
-        isSVG = /*HAS.call(svgElements, T)*/svgElements[T];
-        TT = lower(vnode[TYPE] || '');
-        rnode = isSVG ? document.createElementNS('http://www.w3.org/2000/svg', T.slice(1,-1)) : document.createElement(T.slice(1,-1));
-        for (i=0,l=vnode.attributes.length; i<l; ++i)
+        if (vnode.create)
         {
-            a = vnode.attributes[i];
-            n = a.name; v = a.value;
-            if (is_instance(v, Value))
-            {
-                if (v.changed() && v.id()) view.$reset[v.id()] = v;
-                v = v.val();
-            }
-            if (false === v) continue;
-            if ('id' === n)
-            {
-                rnode[n] = Str(v);
-            }
-            else if ('style' === n)
-            {
-                rnode[n].cssText = Str(v);
-            }
-            else if ('class' === n)
-            {
-                if (isSVG) rnode[SET_ATTR](n, Str(v));
-                else rnode[CLASS] = Str(v);
-            }
-            else if ('selected' === n || 'disabled' === n || 'required' === n || 'checked' === n || 'autoFocus' === n || 'allowfullscreen' === n || 'autoplay' === n ||
-                'capture' === n || 'controls' === n || 'default' === n || 'hidden' === n ||
-                'indeterminate' === n || 'loop' === n || 'muted' === n || 'novalidate' === n ||
-                'open' === n || 'readOnly' === n || 'reversed' === n || 'scoped' === n || 'seamless' === n)
-            {
-                rnode[n] = !!v;
-            }
-            else if ('value' === n)
-            {
-                rnode[n] = Str(v);
-            }
-            else
-            {
-                rnode[SET_ATTR](n, Str(true === v ? n : v));
-            }
+            rnode = vnode.create(view, vnode, with_meta, Value, MV0);
         }
-        if (true === with_meta)
+        else
         {
-            rnode[MV] = rmv = MV0();
-            if (vnode.id || vnode.component || vnode.modified)
+            // createElement is faster than innerHTML in wrapper
+            isSVG = /*HAS.call(svgElements, T)*/svgElements[T];
+            TT = lower(vnode[TYPE] || '');
+            rnode = isSVG ? document.createElementNS('http://www.w3.org/2000/svg', T.slice(1,-1)) : document.createElement(T.slice(1,-1));
+            for (i=0,l=vnode.attributes.length; i<l; ++i)
             {
-                rmv.id = vnode.id;
-                c = rmv.comp = vnode.component;
-                if (c)
+                a = vnode.attributes[i];
+                n = a.name; v = a.value;
+                if (is_instance(v, Value))
                 {
-                    if (c.dom && c.dom[MV]) c.dom[MV].comp = null;
-                    c.dom = rnode;
+                    if (v.changed() && v.id()) view.$reset[v.id()] = v;
+                    v = v.val();
                 }
-                if (vnode.modified)
+                if (false === v) continue;
+                if ('id' === n)
                 {
-                    if (vnode.modified.atts.length)
-                        rmv.att = vnode.modified.atts;
-                    if (vnode.modified.nodes.length)
-                        rmv.mod = vnode.modified.nodes;
+                    rnode[n] = Str(v);
+                }
+                else if ('style' === n)
+                {
+                    rnode[n].cssText = Str(v);
+                }
+                else if ('class' === n)
+                {
+                    if (isSVG) rnode[SET_ATTR](n, Str(v));
+                    else rnode[CLASS] = Str(v);
+                }
+                else if ('selected' === n || 'disabled' === n || 'required' === n || 'checked' === n || 'autoFocus' === n || 'allowfullscreen' === n || 'autoplay' === n ||
+                    'capture' === n || 'controls' === n || 'default' === n || 'hidden' === n ||
+                    'indeterminate' === n || 'loop' === n || 'muted' === n || 'novalidate' === n ||
+                    'open' === n || 'readOnly' === n || 'reversed' === n || 'scoped' === n || 'seamless' === n)
+                {
+                    rnode[n] = !!v;
+                }
+                else if ('value' === n)
+                {
+                    rnode[n] = Str(v);
+                }
+                else
+                {
+                    rnode[SET_ATTR](n, Str(true === v ? n : v));
+                }
+            }
+            if (true === with_meta)
+            {
+                rnode[MV] = rmv = MV0();
+                if (vnode.id || vnode.component || vnode.modified)
+                {
+                    rmv.id = vnode.id;
+                    c = rmv.comp = vnode.component;
+                    if (c)
+                    {
+                        if (c.dom && c.dom[MV]) c.dom[MV].comp = null;
+                        c.dom = rnode;
+                    }
+                    if (vnode.modified)
+                    {
+                        if (vnode.modified.atts.length)
+                            rmv.att = vnode.modified.atts;
+                        if (vnode.modified.nodes.length)
+                            rmv.mod = vnode.modified.nodes;
+                    }
                 }
             }
         }
@@ -2037,7 +2150,7 @@ function set_att(r, n, s, T, TT, forced)
 }
 function delNodes(view, r, index, count)
 {
-    if (0 <= index && index < r.childNodes.length)
+    if (0 <= index && index < r.childNodes.length && 0 < count)
     {
         if (0 >= index && r.childNodes.length <= index+count)
         {
@@ -2197,6 +2310,7 @@ function morphSingle(view, r, rnode, vnode)
     }
     else if (vnode.simple)
     {
+        // skips further modifiedNodes matched tests, assumes matched
         if (vnode.achanged && vnode.uAtts) vnode.uAtts(view, rnode, vnode);
         if (changed && vnode.uNodes) vnode.uNodes(view, rnode, vnode);
     }
@@ -2233,13 +2347,28 @@ function mergeChildNodes(nodes)
             return nodes;
         }, []);
 }
+function reOrderNodes(dom, start, order, m)
+{
+    // TODO: with fewer dom changes..
+    var i, j, len = order.length, tlen = len*m,
+        frag = Fragment(),
+        edge = dom.childNodes[start+tlen],
+        nodes = slice.call(dom.childNodes, start, start+tlen)
+    ;
+    for (i=0; i<len; ++i)
+        for (j=0; j<m; ++j)
+            frag.appendChild(nodes[order[i]*m+j]);
+    if (edge) dom.insertBefore(frag, edge);
+    else dom.appendChild(frag);
+}
 function morphCollection(view, r, v, start, end, end2, startv, count)
 {
-    var vnode, rnode, collection,
+    var vNodes = v.childNodes, rNodes = r.childNodes,
+        vnode, rnode, collection,
         diff, di, dc, d, items, hasKeyed = v.hasKeyedNodes,
         i, j, k, l, m, n, w, x, z, len, frag;
 
-    collection = v.childNodes[startv].nodeValue;
+    collection = vNodes[startv].nodeValue;
     diff = collection.diff;
     m = collection.mappedItem;
     for (di=0,dc=diff.length; di<dc; ++di)
@@ -2256,52 +2385,23 @@ function morphCollection(view, r, v, start, end, end2, startv, count)
                 return count; // break from diff loop completely, this should be only diff
                 break;
             case 'replace':
-                /*len = collection.items().length*m;
-                items = collection.mapped();
-                frag = {nodeType:'',childNodes:mergeChildNodes(items)};
-                x = r.childNodes[start];
-                for (rnode=x,i=0,l=stdMath.min(len, len+count); i<l; ++i)
-                {
-                    // replace common nodes
-                    vnode = frag.childNodes[i];
-                    x = rnode[NEXT];
-                    r.replaceChild(to_node(view, vnode, true), rnode);
-                    rnode = x;
-                }
-                if (0 > count)
-                {
-                    // add remaing nodes
-                    insNodes(view, r, {nodeType:'',childNodes:frag.childNodes.slice(len+count, len)}, 0, -count, r.childNodes[start+len+count]);
-                }
-                else if (0 < count)
-                {
-                    //delete excess nodes
-                    delNodes(view, r, start+len, count);
-                }*/
                 // delete all and add new
                 len = collection.items().length*m;
                 delNodes(view, r, start, stdMath.min(len, len+count));
                 items = collection.mapped();
-                insNodes(view, r, {nodeType:'',childNodes:mergeChildNodes(items)}, 0, len, r.childNodes[start]);
+                insNodes(view, r, {nodeType:'',childNodes:mergeChildNodes(items)}, 0, len, rNodes[start]);
                 count = 0;
                 return count; // break from diff loop completely, this should be only diff
                 break;
             case 'reorder':
-                len = collection.items().length;
-                k = len*m;
-                frag = Fragment();
-                j = r.childNodes[start+k];
-                n = slice.call(r.childNodes, start, start+k);
+                reOrderNodes(r, start, d.from, m);
                 count = 0;
-                for (i=0; i<len; ++i) for (l=0; l<m; ++l) frag.appendChild(n[d.from[i]*m+l]);
-                if (j) r.insertBefore(frag, j);
-                else r.appendChild(frag);
                 return count; // break from diff loop completely, this should be only diff
                 break;
             case 'add':
                 len = (d.to-d.from+1)*m;
                 items = collection.mapped(d.from, d.to);
-                insNodes(view, r, {nodeType:'',childNodes:mergeChildNodes(items)}/*htmlNode(view, '', null, null, [], items)*/, 0, len, r.childNodes[start+d.from*m]);
+                insNodes(view, r, {nodeType:'',childNodes:mergeChildNodes(items)}/*htmlNode(view, '', null, null, [], items)*/, 0, len, rNodes[start+d.from*m]);
                 if (0 > count) count += len;
                 break;
             case 'del':
@@ -2310,8 +2410,8 @@ function morphCollection(view, r, v, start, end, end2, startv, count)
                 if (0 < count) count -= len;
                 break;
             case 'swap':
-                i = slice.call(r.childNodes, start+d.from*m, start+d.from*m+m);
-                j = slice.call(r.childNodes, start+d.to*m, start+d.to*m+m);
+                i = slice.call(rNodes, start+d.from*m, start+d.from*m+m);
+                j = slice.call(rNodes, start+d.to*m, start+d.to*m+m);
                 k = j[j.length-1][NEXT];
                 for (l=0; l<m; ++l) r.replaceChild(j[l], i[l]);
                 if (k) for (l=0; l<m; ++l) r.insertBefore(i[l], k);
@@ -2320,7 +2420,7 @@ function morphCollection(view, r, v, start, end, end2, startv, count)
             case 'change':
                 len = (d.to-d.from+1)*m;
                 z = new Array(len);
-                for (w=start+d.from*m,j=0,i=0,rnode=r.childNodes[w]; i<len; ++i)
+                for (w=start+d.from*m,j=0,i=0,rnode=rNodes[w]; i<len; ++i)
                 {
                     //rnode = r.childNodes[w+i];
                     x = rnode[MV] ? rnode[MV].comp : null;
@@ -2334,7 +2434,7 @@ function morphCollection(view, r, v, start, end, end2, startv, count)
                 view.$cache['#'] = z = null;
                 for (n=frag/*.childNodes*/,w=start+d.from*m,i=0,j=n.length,rnode=r.childNodes[w]; i<j; ++i)
                 {
-                    vnode = n[i]; //rnode = r.childNodes[w+i];
+                    vnode = n[i]; //rnode = rNodes[w+i];
                     if (eqNodes(rnode, vnode))
                     {
                         morphSingle(view, r, rnode, vnode);
@@ -2350,67 +2450,253 @@ function morphCollection(view, r, v, start, end, end2, startv, count)
                 break;
         }
     }
-    // collection is supposed to cover whole current modification range
     return count;
 }
-function morphSelectedNodes(view, r, v, start, end, end2, startv, count)
+function morphKeyedNodes(view, r, v, start, end, end2, startv, count)
 {
-    var index, indexv, vnode, rnode, rnode2, T,
-        hasKeyed = v.hasKeyedNodes, keyed,
-        i, j, k, l, frag;
+    // standard algorithm to morph DOM tree using minimum DOM operations
+    var vNodes = v.childNodes, rNodes = r.childNodes, cNodes,
+        vnode, vnodef, rnode, rnodef, rnode2, vLeft, rLeft,
+        i1, j1, i2, j2, i, j, x, z, cnt, del, matched, pos,
+        keyed, places, lis, needsReorder, loop = true;
 
-    if ('collection' === v.childNodes[startv].nodeType)
-    {
-        return morphCollection(view, r, v, start, end, end2, startv, count);
-    }
+    j1 = startv; j2 = startv + end - start;
+    i1 = start; i2 = stdMath.max(start, stdMath.min(end+count, rNodes.length-1));
+    vnode = vNodes[j1]; vnodef = vNodes[j2];
+    rnode = rNodes[i1]; rnodef = rNodes[i2];
+    x = rnodef[NEXT];
 
-    if (hasKeyed)
+    while (loop)
     {
-        // there are keyed nodes, associate them in a map for reuse
-        for (keyed={},index=start,rnode=r.childNodes[index],k=stdMath.min(end, r.childNodes.length-1); index<=k; ++index)
+        loop = false;
+        // start
+        while ((i1 <= i2) && (j1 <= j2) && eqNodes(rnode, vnode))
         {
-            //if (index >= z) break;
-            // nextSibling is faster than childNodes[index]
-            //rnode = r.childNodes[index];
-            //rnode[MV] = rnode[MV] || DEFAULT_MV;
-            // store the keyed nodes in a map
-            // to be retrieved and reused easily
-            if (rnode[MV] && rnode[MV].id)
-                keyed['#'+rnode[MV].id] = rnode;
-            // nextSibling is faster than childNodes[index]
+            morphSingle(view, r, rnode, vnode);
+            ++i1; ++j1;
+            if (i1 > i2 || j1 > j2) {loop = false; break;}
             rnode = rnode[NEXT];
+            vnode = vNodes[j1];
+        }
+        // end
+        while ((i1 <= i2) && (j1 <= j2) && eqNodes(rnodef, vnodef))
+        {
+            morphSingle(view, r, rnodef, vnodef);
+            x = rnodef;
+            --i2; --j2;
+            if (i1 > i2 || j1 > j2) {loop = false; break;}
+            rnodef = rnodef[PREV];
+            vnodef = vNodes[j2];
+        }
+        // reverse end start
+        while ((i1 <= i2) && (j1 <= j2) && eqNodes(rnodef, vnode))
+        {
+            loop = true;
+            rnode2 = rnodef[PREV];
+            r.insertBefore(rnodef, rnode);
+            morphSingle(view, r, rnodef, vnode);
+            --i2; ++j1;
+            if (i1 > i2 || j1 > j2) {loop = false; break;}
+            rnodef = rnode2;
+            vnode = vNodes[j1];
+        }
+        // reverse start end
+        while ((i1 <= i2) && (j1 <= j2) && eqNodes(rnode, vnodef))
+        {
+            loop = true;
+            rnode2 = rnode[NEXT];
+            if (x) r.insertBefore(rnode, x);
+            else r.appendChild(rnode);
+            morphSingle(view, r, rnode, vnodef);
+            x = rnode;
+            ++i1; --j2;
+            if (i1 > i2 || j1 > j2) {loop = false; break;}
+            rnode = rnode2;
+            vnodef = vNodes[j2];
         }
     }
-    for (indexv=startv,index=start,rnode=r.childNodes[index],l=v.childNodes.length,k=r.childNodes.length; index<=end; ++index,++indexv)
+
+    rLeft = stdMath.max(0, i2 - i1 + 1);
+    vLeft = stdMath.max(0, j2 - j1 + 1);
+    if (!rLeft)
+    {
+        if (vLeft)
+        {
+            insNodes(view, r, v, j1, vLeft, x);
+            count += vLeft;
+        }
+    }
+    else if (!vLeft)
+    {
+        if (rLeft)
+        {
+            delNodes(view, r, i1, rLeft);
+            count -= rLeft;
+        }
+    }
+    else
+    {
+        places = new A32I(vLeft);
+        needsReorder = false;
+        pos = 0;
+        matched = 0;
+        del = 0;
+        keyed = {};
+        // create lookup dictionary
+        for (j=j1; j<=j2; ++j)
+        {
+            // assume vnode has key id, since they are marked as keyed
+            vnode = vNodes[j];
+            keyed['#'+vnode.id] = j;
+        }
+        for (i=i1,rnode=rNodes[i]; rnode && (i<=i2); ++i)
+        {
+            rnode2 = rnode[NEXT];
+            if (matched < vLeft)
+            {
+                j = rnode[MV] && rnode[MV].id && keyed['#'+rnode[MV].id];
+                if ((null != j) && eqNodes(rnode, vnode=vNodes[j]))
+                {
+                    if (0 < del)
+                    {
+                        i2 -= del;
+                        i -= del;
+                        delNodes(view, r, i, del);
+                        count -= del;
+                        del = 0;
+                    }
+                    places[j - j1] = i + 1;
+                    if (pos > j) needsReorder = true;
+                    else pos = j;
+                    morphSingle(view, r, rnode, vnode);
+                    ++matched;
+                }
+                else
+                {
+                    ++del;
+                }
+            }
+            else
+            {
+                del += i2 - i + 1;
+                i = i2+1;
+                break;
+            }
+            rnode = rnode2;
+        }
+        if (0 < del)
+        {
+            i2 -= del;
+            i -= del;
+            delNodes(view, r, i, del);
+            count -= del;
+            del = 0;
+        }
+        if (!matched)
+        {
+            // nothing matched, replace all
+            if (i2 >= i1)
+            {
+                delNodes(view, r, i1, cnt=i2-i1+1);
+                count -= cnt;
+            }
+            if (j2 >= j1)
+            {
+                insNodes(view, r, v, j1, cnt=j2-j1+1, x);
+                count += cnt;
+            }
+        }
+        else if (needsReorder)
+        {
+            // matched entries are not in increasing order
+            // compute longest increasing subsequence
+            lis = longest_incr_subseq(places); // O(n log n) !!
+            j = lis.length - 1;
+            cNodes = slice.call(rNodes, i1, i2+1); // store as immutable
+            for (i=vLeft-1; i>=0; --i)
+            {
+                pos = places[i];
+                if (!pos)
+                {
+                    // insert new entry in correct place
+                    z = to_node(view, vNodes[i+j1], true);
+                    if (x) r.insertBefore(z, x);
+                    else r.appendChild(z);
+                    x = z;
+                    ++count;
+                }
+                else if ((0 > j) || (i !== lis[j]))
+                {
+                    // move existing entry in correct place
+                    z = cNodes[pos-1-i1];
+                    if (x) r.insertBefore(z, x);
+                    else r.appendChild(z);
+                    x = z;
+                }
+                else
+                {
+                    // new place for entry
+                    x = cNodes[pos-1-i1];
+                    --j;
+                }
+            }
+        }
+        else if (matched < vLeft)
+        {
+            // matched entries are in increasing order
+            for (i=vLeft-1; i>=0; --i)
+            {
+                pos = places[i];
+                if (!pos)
+                {
+                    // insert new entry in correct place
+                    z = to_node(view, vNodes[i+j1], true);
+                    if (x) r.insertBefore(z, x);
+                    else r.appendChild(z);
+                    x = z;
+                    ++count;
+                }
+                else
+                {
+                    // new place for entry
+                    x = rNodes[pos-1];
+                }
+            }
+        }
+    }
+    return count;
+}
+function morphNodes(view, r, v, start, end, end2, startv, count)
+{
+    // linear general algorithm to morph DOM tree but DOM operations may not be minimum
+    var rNodes = r.childNodes, vNodes = v.childNodes,
+        index, indexv, vnode, rnode, rnode2,
+        i, j, k, l, frag;
+
+    for (indexv=startv,index=start,rnode=rNodes[index],l=vNodes.length,k=rNodes.length; index<=end; ++index,++indexv)
     {
         if (indexv >= l) break;
-        vnode = v.childNodes[indexv];
         if (index >= k)
         {
-            //r.childNodes.length;
+            //rNodes.length;
             insNodes(view, r, v, indexv, end-k+1, null);
             if (0 > count) count += end-k+1;
             break;
         }
         if ((0 > count) && (index >= end2+count+1))
         {
-            insNodes(view, r, v, indexv, -count, r.childNodes[end2+count+1]);
+            insNodes(view, r, v, indexv, -count, rNodes[end2+count+1]);
             count = 0;
             break;
         }
 
-        //rnode = r.childNodes[index];
-        T = nodeType(rnode);
+        vnode = vNodes[indexv];
+        //rnode = rNodes[index];
 
-        if (eqNodes(rnode, vnode, T))
+        if (eqNodes(rnode, vnode))
         {
             morphSingle(view, r, rnode, vnode);
             rnode = rnode[NEXT];
-        }
-        else if (hasKeyed && vnode.id && (frag=keyed['#'+vnode.id]) && eqNodes(frag, vnode))
-        {
-            r.insertBefore(frag, rnode);
-            morphSingle(view, r, frag, vnode);
         }
         else if (0 === count)
         {
@@ -2421,16 +2707,16 @@ function morphSelectedNodes(view, r, v, start, end, end2, startv, count)
         else if (0 > count)
         {
             r.insertBefore(frag=to_node(view, vnode, true), rnode);
-            k++;
-            count++;
+            ++k;
+            ++count;
         }
         else
         {
             for (i=index,j=0; 0 < count && j < count; )
             {
-                j++;
-                if (index+j >= k/*r.childNodes.length*/) break;
-                rnode = rnode[NEXT]/*r.childNodes[index+j]*/;
+                ++j;
+                if (index+j >= k/*rNodes.length*/) break;
+                rnode = rnode[NEXT]/*rNodes[index+j]*/;
                 if (eqNodes(rnode, vnode)) break;
             }
             if (0 < j)
@@ -2439,7 +2725,7 @@ function morphSelectedNodes(view, r, v, start, end, end2, startv, count)
                 k -= j;
                 count -= j;
             }
-            if (index >= k/*r.childNodes.length*/)
+            if (index >= k/*rNodes.length*/)
             {
                 insNodes(view, r, v, indexv, end-k+1, null);
                 count = 0;
@@ -2447,9 +2733,8 @@ function morphSelectedNodes(view, r, v, start, end, end2, startv, count)
             }
             else
             {
-                rnode = r.childNodes[index];
-                T = nodeType(rnode);
-                if (eqNodes(rnode, vnode, T))
+                rnode = rNodes[index];
+                if (eqNodes(rnode, vnode))
                 {
                     morphSingle(view, r, rnode, vnode);
                     rnode = rnode[NEXT];
@@ -2471,10 +2756,20 @@ function morphSelectedNodes(view, r, v, start, end, end2, startv, count)
     }
     return count;
 }
+function morphSelectedNodes(view, r, v, start, end, end2, startv, count)
+{
+    if ('collection' === v.childNodes[startv].nodeType)
+        // collection is supposed to cover whole current modification range
+        return morphCollection(view, r, v, start, end, end2, startv, count);
+    else if (v.hasKeyedNodes)
+        return morphKeyedNodes(view, r, v, start, end, end2, startv, count);
+    else
+        return morphNodes(view, r, v, start, end, end2, startv, count);
+}
 function morphAll(view, r, v, alreadyInited)
 {
     // morph unconditionally r (real) DOM to match v (virtual) DOM
-    var vc = v.childNodes.length, rc,
+    var vNodes = v.childNodes, rNodes = r.childNodes, vc = vNodes.length, rc,
         count, i, j, index, hasKeyed = v.hasKeyedNodes, keyed,
         vnode, rnode, rnode2, T, frag,
         rmv, rComp, vComp;
@@ -2502,17 +2797,17 @@ function morphAll(view, r, v, alreadyInited)
     // need to flatten first any existent collections
     for (index=vc-1; index>=0; --index)
     {
-        if ('collection' === v.childNodes[index].nodeType)
-            v.childNodes.splice.apply(v.childNodes, [index, 1].concat(htmlNode(view, '', null, null, [], v.childNodes[index].nodeValue.mapped()).childNodes));
+        if ('collection' === vNodes[index].nodeType)
+            vNodes.splice.apply(vNodes, [index, 1].concat(mergeChildNodes(vNodes[index].nodeValue.mapped())));
     }
-    vc = v.childNodes.length;
-    rc = r.childNodes.length;
+    vc = vNodes.length;
+    rc = rNodes.length;
     if (hasKeyed)
     {
         // there are keyed nodes, associate them in a map for reuse
         for (keyed={},index=0,rnode=r.firstChild; rnode; /*index<rc; ++index*/)
         {
-            //rnode = r.childNodes[index];
+            //rnode = rNodes[index];
             //rnode[MV] = rnode[MV] || DEFAULT_MV;
             // store the keyed nodes in a map
             // to be retrieved and reused easily
@@ -2526,12 +2821,12 @@ function morphAll(view, r, v, alreadyInited)
     {
         if (index >= rc)
         {
-            insNodes(view, r, v, index, vc-r.childNodes.length, null);
+            insNodes(view, r, v, index, vc-rNodes.length, null);
             if (0 > count) count = 0;
             break;
         }
-        vnode = v.childNodes[index];
-        //rnode = r.childNodes[index];
+        vnode = vNodes[index];
+        //rnode = rNodes[index];
         T = nodeType(rnode);
 
         if (eqNodes(rnode, vnode, T))
@@ -2561,8 +2856,8 @@ function morphAll(view, r, v, alreadyInited)
             for (i=index,j=0; 0 < count && j < count; )
             {
                 j++;
-                if (index+j >= rc/*r.childNodes.length*/) break;
-                rnode = rnode[NEXT]/*r.childNodes[index+j]*/;
+                if (index+j >= rc/*rNodes.length*/) break;
+                rnode = rnode[NEXT]/*rNodes[index+j]*/;
                 if (eqNodes(rnode, vnode)) break;
             }
             if (0 < j)
@@ -2579,7 +2874,7 @@ function morphAll(view, r, v, alreadyInited)
             }
             else
             {
-                rnode = r.childNodes[index];
+                rnode = rNodes[index];
                 T = nodeType(rnode);
                 if (eqNodes(rnode, vnode, T))
                 {
@@ -2595,12 +2890,13 @@ function morphAll(view, r, v, alreadyInited)
             }
         }
     }
-    if (r.childNodes.length > vc) delNodes(view, r, vc, r.childNodes.length-vc);
+    if (rNodes.length > vc) delNodes(view, r, vc, rNodes.length-vc);
 }
 function morph(view, r, v)
 {
     // morph r (real) DOM to match v (virtual) DOM
-    var vc = v.childNodes.length, vpc = v.potentialChildNodes,
+    var vNodes = v.childNodes, rNodes = r.childNodes,
+        vc = vNodes.length, vpc = v.potentialChildNodes,
         count = 0, offset = 0, matched, match,
         mi, m, mc, di, dc, i, j, index, keyed,
         vnode, rnode, T, frag, rmv = r[MV] || MV0(),
@@ -2622,7 +2918,7 @@ function morph(view, r, v)
     else if (rmv.mod)
         rmv.mod = null;
 
-    if (!r.childNodes.length)
+    if (!rNodes.length)
     {
         if (0 < vc) insNodes(view, r, v, 0, vc, null);
     }
@@ -2641,7 +2937,7 @@ function morph(view, r, v)
                 offset += (m.to - m.from + 1) - (modifiedNodesPrev[mi].to - modifiedNodesPrev[mi].from + 1);
                 count += match;
             }
-            matched = (modifiedNodes.length === count) && (offset+r.childNodes.length === vpc);
+            matched = (modifiedNodes.length === count) && (offset+rNodes.length === vpc);
         }
         if (matched)
         {
@@ -2656,12 +2952,12 @@ function morph(view, r, v)
                 else if (modifiedNodesPrev[mi].to < modifiedNodesPrev[mi].from)
                 {
                     count = (m.to - m.from + 1);
-                    if (0 < count) insNodes(view, r, v, m.from-offset, 'collection' === v.childNodes[m.from-offset].nodeType ? 1 : count, r.childNodes[m.from]);
+                    if (0 < count) insNodes(view, r, v, m.from-offset, 'collection' === vNodes[m.from-offset].nodeType ? 1 : count, rNodes[m.from]);
                 }
                 else
                 {
                     count = (modifiedNodesPrev[mi].to - modifiedNodesPrev[mi].from + 1) - (m.to - m.from + 1);
-                    if (v.diff && (0 >= count) && (di < v.diff.length) && (v.componentNodes === v.potentialChildNodes) && (v.diff[di][0] >= m.from) && (v.diff[di][1] <= m.to))
+                    /*if (v.diff && (0 >= count) && (di < v.diff.length) && (v.componentNodes === v.potentialChildNodes) && (v.diff[di][0] >= m.from) && (v.diff[di][1] <= m.to))
                     {
                         for (dc=v.diff.length; (di<dc) && (v.diff[di][1]<=m.to); ++di)
                         {
@@ -2669,11 +2965,11 @@ function morph(view, r, v)
                         }
                     }
                     else
-                    {
+                    {*/
                         morphSelectedNodes(view, r, v, m.from, m.to, m.to, m.from-offset, count);
-                    }
+                    /*}*/
                 }
-                offset += (vc !== vpc && 'collection' === v.childNodes[m.from-offset].nodeType ? m.to-m.from : 0);
+                offset += (vc !== vpc && 'collection' === vNodes[m.from-offset].nodeType ? m.to-m.from : 0);
             }
         }
         else
@@ -3139,38 +3435,6 @@ function morphCollectionSimple(view, list, key, collection, isDirty, model, only
                 }
                 return;
             case 'replace':
-                /*count = items.length - list.map.length;
-                // replace common nodes
-                n = parentNode.childNodes[startIndex + 1];
-                iterate(function(index) {
-                    var node = clone(list);
-                    list.map[index] = node.map;
-                    morphSimple(view, list.map[index], model.getProxy(key+'.'+index, '.', items[index]), false);
-                    each(node.dom.childNodes, function(nn){
-                        x = n[NEXT];
-                        parentNode.replaceChild(nn, n);
-                        n = x;
-                    });
-                }, 0, stdMath.min(list.map.length, items.length)-1);
-                if (0 < count)
-                {
-                    // add missing nodes
-                    frag = Fragment();
-                    iterate(function(index) {
-                        var node = clone(list);
-                        list.map.push(node.map);
-                        morphSimple(view, list.map[index], model.getProxy(key+'.'+index, '.', items[index]), false);
-                        frag.appendChild(node.dom);
-                    }, items.length-count, items.length-1);
-                    if (end) parentNode.insertBefore(frag, end);
-                    else parentNode.appendChild(frag);
-                }
-                else if (0 > count)
-                {
-                    // remove excess nodes
-                    list.map.splice(items.length, -count);
-                    delNodes(null, parentNode, startIndex+1+m*items.length, -m*count);
-                }*/
                 // delete all and add new
                 delNodes(null, parentNode, startIndex+1, m*list.map.length);
                 list.map = new Array(items.length);
@@ -3187,17 +3451,9 @@ function morphCollectionSimple(view, list, key, collection, isDirty, model, only
             case 'reorder':
                 count = items.length;
                 k = count*m;
-                frag = Fragment();
-                n = slice.call(parentNode.childNodes, startIndex+1, startIndex+1+k);
                 l = list.map.slice();
-                for (i=0; i<count; ++i)
-                {
-                    list.map[i] = l[d.from[i]];
-                    for (j=0; j<m; ++j)
-                        frag.appendChild(n[d.from[i]*m+j]);
-                }
-                if (end) parentNode.insertBefore(frag, end);
-                else parentNode.appendChild(frag);
+                for (i=0; i<count; ++i) list.map[i] = l[d.from[i]];
+                reOrderNodes(parentNode, startIndex+1, d.from, m);
                 return;
             case 'swap':
                 x = list.map[d.from];
@@ -5348,7 +5604,7 @@ model.set( String dottedKey, * val [, Boolean publish=false] );
                     {
                         o.set(k, val, pub, callData);
                         each(collections, function(collection){
-                            collection[0]._upd('change', collection[1], collection[1]);
+                            collection[0].upd(collection[1]);
                             setDirty(model, collection[2]);
                         });
                     }
@@ -5447,7 +5703,7 @@ model.set( String dottedKey, * val [, Boolean publish=false] );
                 if (false !== setter.call(model, dottedKey, val, pub))
                 {
                     each(collections, function(collection){
-                        collection[0]._upd('change', collection[1], collection[1]);
+                        collection[0].upd(collection[1]);
                         setDirty(model, collection[2]);
                     });
                     setDirty(model, ks);
@@ -5474,7 +5730,7 @@ model.set( String dottedKey, * val [, Boolean publish=false] );
             if (prevval !== val)
             {
                 each(collections, function(collection){
-                    collection[0]._upd('change', collection[1], collection[1]);
+                    collection[0].upd(collection[1]);
                     setDirty(model, collection[2]);
                 });
 
@@ -5563,7 +5819,7 @@ model.[add|append]( String dottedKey, * val [, Boolean prepend=False, Boolean pu
                     k = k.join('.');
                     o.add(k, val, prepend, pub, callData);
                     each(collections, function(collection){
-                        collection[0]._upd('change', collection[1], collection[1]);
+                        collection[0].upd(collection[1]);
                         setDirty(model, collection[2]);
                     });
                 }
@@ -5658,7 +5914,7 @@ model.[add|append]( String dottedKey, * val [, Boolean prepend=False, Boolean pu
                 if (false !== setter.call(model, dottedKey, val, pub))
                 {
                     each(collections, function(collection){
-                        collection[0]._upd('change', collection[1], collection[1]);
+                        collection[0].upd(collection[1]);
                         setDirty(model, collection[2]);
                     });
                     setDirty(model, ks);
@@ -5710,7 +5966,7 @@ model.[add|append]( String dottedKey, * val [, Boolean prepend=False, Boolean pu
             }
 
             each(collections, function(collection){
-                collection[0]._upd('change', collection[1], collection[1]);
+                collection[0].upd(collection[1]);
                 setDirty(model, collection[2]);
             });
 
@@ -5791,7 +6047,7 @@ model.[ins|insert]( String dottedKey, * val, Number index [, Boolean publish=fal
                     k = k.join('.');
                     o.ins(k, val, index, pub, callData);
                     each(collections, function(collection){
-                        collection[0]._upd('change', collection[1], collection[1]);
+                        collection[0].upd(collection[1]);
                         setDirty(model, collection[2]);
                     });
                 }
@@ -5883,7 +6139,7 @@ model.[ins|insert]( String dottedKey, * val, Number index [, Boolean publish=fal
                 if (false !== setter.call(model, dottedKey, val, pub))
                 {
                     each(collections, function(collection){
-                        collection[0]._upd('change', collection[1], collection[1]);
+                        collection[0].upd(collection[1]);
                         setDirty(model, collection[2]);
                     });
                     setDirty(model, ks/*.concat(index)*/);
@@ -5918,7 +6174,7 @@ model.[ins|insert]( String dottedKey, * val, Number index [, Boolean publish=fal
             }
 
             each(collections, function(collection){
-                collection[0]._upd('change', collection[1], collection[1]);
+                collection[0].upd(collection[1]);
                 setDirty(model, collection[2]);
             });
 
@@ -5977,7 +6233,7 @@ model.[del|delete|remove]( String dottedKey [, Boolean publish=false, Boolean re
                 val = o.get(k);
                 o.del(k, reArrangeIndexes, pub, callData);
                 each(collections, function(collection){
-                    collection[0]._upd('change', collection[1], collection[1]);
+                    collection[0].upd(collection[1]);
                     setDirty(model, collection[2]);
                 });
                 pub && model.publish('change', {
@@ -6026,7 +6282,7 @@ model.[del|delete|remove]( String dottedKey [, Boolean publish=false, Boolean re
             }
 
             each(collections, function(collection){
-                collection[0]._upd('change', collection[1], collection[1]);
+                collection[0].upd(collection[1]);
                 setDirty(model, collection[2]);
             });
 
@@ -6182,7 +6438,7 @@ model.[delAll|deleteAll]( Array dottedKeys [, Boolean reArrangeIndexes=true] );
             }
         }
         each(collections, function(collection){
-            collection[0]._upd('change', collection[1], collection[1]);
+            collection[0].upd(collection[1]);
             setDirty(model, collection[2]);
         });
         return model;
@@ -6553,7 +6809,15 @@ Collection[proto] = {
         return self;
     }
     ,_upd: function(action, start, end) {
-        this.diff.push({action:action, from:start, to:end});
+        var diff = this.diff/*, last = diff.length ? diff[diff.length-1] : null*/;
+        /*if (!last || (last.action !== action) || (last.to < start-1) || (last.from >= end))
+        {*/
+            diff.push({action:action, from:start, to:end});
+        /*}
+        else
+        {
+            last.to = stdMath.max(last.to, end);
+        }*/
         return this;
     }
 /**[DOC_MARKDOWN]
@@ -6642,6 +6906,14 @@ collection.set(newData);
             }
         }
         return self;
+    }
+/**[DOC_MARKDOWN]
+// mark entry at index as changed
+collection.upd(index);
+
+[/DOC_MARKDOWN]**/
+    ,upd: function(index) {
+        return this._upd('change', index, index);
     }
 /**[DOC_MARKDOWN]
 // replace data with completely new data, return same collection
@@ -7728,13 +8000,13 @@ view.components( Object components );
         }
         return view;
     }
-    ,component: function(name, id, props, childs) {
+    ,component: function(name, id, data, children) {
         var view = this, out, c, compId, nk, component, changed;
         if (name && (c=view.$components[nk='#'+name]))
         {
             if (c.tpl && !c.out)
             {
-                c.out = tpl2code(view, c.tpl, 'props,childs,', getCtxScoped(view, 'view'), {trim:true, id:view.attr('mv-id')}, '<mv-component>', 'this.view');
+                c.out = tpl2code(view, c.tpl, 'data,children,', getCtxScoped(view, 'view'), {trim:true, id:view.attr('mv-id')}, '<mv-component>', 'this.view');
             }
             if (c.out)
             {
@@ -7755,16 +8027,16 @@ view.components( Object components );
                 {
                     component = new MVComponentInstance(view, compId, name, null, c.opts && c.opts.model ? c.opts.model() : null);
                     view.$cache[compId] = component;
-                    if (component.model) component.model.on('change', function(){view.render();});
+                    if (component.model) component.model.on('change', function() {view.render();});
                     changed = true;
                 }
                 else
                 {
                     changed = component.model ? component.model.isDirty() : false;
-                    changed = (c.opts && 'function' === typeof(c.opts.changed) ? c.opts.changed(component.props, props, component) : false) || changed;
+                    changed = (c.opts && ('function' === typeof c.opts.changed) ? c.opts.changed(component.data, data, component) : false) || changed;
                 }
-                component.props = props;
-                out = c.out.call(component, props, childs||[], htmlNode);
+                component.data = data;
+                out = c.out.call(component, data, children||[], htmlNode);
                 out.component = component;
                 out.changed = changed;
                 return out;
@@ -7781,8 +8053,8 @@ view.router({
     prefix: "/prefix/", // default no prefix ""
     routes: {
         "/": () => (<IndexPage/>),
-        "/user/:id": (match) => (<UserPage props={{id:match.id}}/>),
-        "/msg/:id/:line?": (match) => (<MsgPage props={{id:match.id,line:match.line}}/>) // if there is no :line, match.line will be null
+        "/user/:id": (match) => (<UserPage data={{id:match.id}}/>),
+        "/msg/:id/:line?": (match) => (<MsgPage data={{id:match.id,line:match.line}}/>) // if there is no :line, match.line will be null
     },
     fail: () => (<ErrorPage/>) // default empty
 });
@@ -8036,7 +8308,7 @@ view.precompile();
                     c = view.$components[n];
                     if (c.tpl && !c.out)
                     {
-                        c.out = tpl2code(view, c.tpl, 'props,childs,', getCtxScoped(view, 'view'), {trim:true, id:view.attr('mv-id')}, '<mv-component>', 'this.view');
+                        c.out = tpl2code(view, c.tpl, 'data,children,', getCtxScoped(view, 'view'), {trim:true, id:view.attr('mv-id')}, '<mv-component>', 'this.view');
                     }
                 }
             }
@@ -8801,7 +9073,7 @@ var MyComponent = ModelView.View.Component(
     Object options = {
          attached: (componentInstance) => {} // component attached to DOM, for componentInstance see below
         ,detached: (componentInstance) => {} // component detached from DOM, for componentInstance see below
-        ,changed: (oldProps, newProps, componentInstance) => false // whether component has changed given new props
+        ,changed: (oldData, newData, componentInstance) => false // whether component has changed given new data
         ,model: () => ({clicks:0}) // initial state model data, if state model is to be used, else null
         ,actions: {
             // custom component actions here, if any, eg referenced as <.. mv-evt mv-on-click=":click"></..>
@@ -8819,7 +9091,6 @@ View.Component = function Component(name, tpl, opts) {
   if (!is_instance(self, Component)) return new Component(name, tpl, opts);
   self.name = trim(name);
   self.tpl = trim(tpl);
-  self.htpl = null;
   self.out = null;
   self.opts = opts || {};
 };
@@ -8828,13 +9099,11 @@ View.Component[proto] = {
     ,name: ''
     ,opts: null
     ,tpl: ''
-    ,htpl: null
     ,out: null
     ,dispose: function() {
         var self = this;
         self.opts = null;
         self.tpl = null;
-        self.htpl = null;
         self.out = null;
         return self;
     }
@@ -8846,25 +9115,25 @@ View.Component[proto] = {
 MyComponentInstance {
     view // the main view this component instance is attached to
     model // component state model, if any, else null
-    props // current component instance props
+    data // current component instance data
     dom // domElement this component instance is attached to
-    data // property to attach user-defined data, if needed
+    d // property to attach user-defined data, if needed
 }
 
 ```
 [/DOC_MARKDOWN]**/
-function MVComponentInstance(view, id, name, props, state, dom)
+function MVComponentInstance(view, id, name, data, state, dom)
 {
     var self = this;
-    if (!is_instance(self, MVComponentInstance)) return new MVComponentInstance(view, id, name, props, state, dom);
+    if (!is_instance(self, MVComponentInstance)) return new MVComponentInstance(view, id, name, data, state, dom);
     self.status = 0;
     self.id = id;
     self.name = name;
-    self.props = props || null;
+    self.data = null == data ? null : data;
     self.model = state ? (is_instance(state, Model) ? state : new Model(self.name, state)) : null;
     self.view = view;
     self.dom = dom || null;
-    self.data = {};
+    self.d = {};
 }
 View.Component.Instance = MVComponentInstance;
 MVComponentInstance[proto] = {
@@ -8872,16 +9141,16 @@ MVComponentInstance[proto] = {
     ,status: 0
     ,id: null
     ,name: null
-    ,props: null
+    ,data: null
     ,model: null
     ,view: null
     ,dom: null
-    ,data: null
+    ,d: null
     ,dispose: function() {
         var self = this;
         self.status = 2;
         self.data = null;
-        self.props = null;
+        self.data = null;
         if (self.model) self.model.dispose();
         self.model = null;
         self.view = null;
@@ -8939,7 +9208,7 @@ new ModelView.View('view')
                     this.view.model().set('msg', 'World', true);
                 }
             },
-            changed: (oldProps, newProps) => false,
+            changed: (oldData, newdata) => false,
             attached: (comp) => {console.log('HelloButton attached to DOM <'+comp.dom.tagName+'>')},
             detached: (comp) => {console.log('HelloButton detached from DOM <'+comp.dom.tagName+'>')}
         }

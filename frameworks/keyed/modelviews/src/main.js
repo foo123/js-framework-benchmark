@@ -25,22 +25,6 @@ const buildData = (count) => {
   return data;
 };
 
-const findIndex = (node) => {
-    let index = 0;
-    while (node.previousElementSibling) {
-        index++;
-        node = node.previousElementSibling;
-    }
-    return index;
-};
-
-const parentRow = (node) => {
-    while (node && ('TR' !== node.tagName)) {
-        node = node.parentNode;
-    }
-    return node;
-};
-
 const list = new ModelView.Model.Collection([]);
 let selected = null;
 
@@ -81,28 +65,28 @@ const Main = new ModelView.View('view')
             }
         },
         'REMOVE': function(evt, el) {
-            const id = +el.dataset.id;
-            const idx = /*findIndex(tr)*/list.items().findIndex(item => item.id === id);
+            const id = +el.parentNode.parentNode.id;
+            const items = list.items();
+            const idx = items.findIndex(item => item.id === id);
             list.splice(idx, 1);
             if (this.$renderdom.children[idx] === selected) selected = null;
             this.model().notify('list');
         },
         'SELECT': function(evt, el) {
-            const id = +el.dataset.id;
-            let idx = list.items().findIndex(item => item.id === id);
+            const id = +el.parentNode.parentNode.id;
+            const items = list.items();
+            let idx = items.findIndex(item => item.id === id);
             const tr = this.$renderdom.children[idx];
             let item;
             // framework idiomatically allows that the specifics of this action can be handled faster
             // realistic use with no loss of generality
             if (selected !== tr) {
-                tr.classList.add('danger');
-                item = list.items()[idx];
+                item = items[idx];
                 item.selected = 'danger';
+                tr.classList.add('danger');
                 if (selected) {
-                    id = +selected.id;
-                    idx = list.items().findIndex(item => item.id === id);//findIndex(selected);
-                    item = list.items()[idx];
-                    item.selected = '';
+                    let sid = +selected.id;
+                    items[items.findIndex(item => item.id === sid)].selected = '';
                     selected.classList.remove('danger');
                 }
                 selected = tr;

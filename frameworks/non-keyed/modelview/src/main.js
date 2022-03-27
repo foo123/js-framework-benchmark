@@ -16,63 +16,61 @@ const buildData = (count) => {
 
   for (let i = 0; i < count; i++) {
     data[i] = {
-      id: ModelView.Model.Value(nextId++),
-      label: ModelView.Model.Value(A[random(A.length)]+' '+C[random(C.length)]+' '+N[random(N.length)]),
-      selected: ModelView.Model.Value('')
+      id: new ModelView.Model.Value(nextId++),
+      label: new ModelView.Model.Value(A[random(A.length)]+' '+C[random(C.length)]+' '+N[random(N.length)])
     };
   }
-
   return data;
 };
 
-const findIndex = (node) => {
-    let index = 0;
-    while (node.previousElementSibling) {
-        index++;
-        node = node.previousElementSibling;
-    }
-    return index;
-};
-
-const parentRow = (node) => {
-    while (node && ('TR' !== node.tagName)) {
-        node = node.parentNode;
-    }
-    return node;
-};
-
-const clone = (obj) => ({id:obj.id.dirty(true), label:obj.label.dirty(true), selected:obj.selected.dirty(true)})
-
 const Row = new ModelView.View.Component('Row', `
-<tr id={props.id} class={props.selected}>
-<td class="col-md-1">{props.id}</td>
-<td class="col-md-4"><a mv-evt mv-on-click="SELECT" data-id={props.id}>{props.label}</a></td>
-<td class="col-md-1"><a mv-evt mv-on-click="REMOVE" data-id={props.id}><span class="glyphicon glyphicon-remove" aria-hidden="true"/></a></td>
+<tr id={data.id} class={selected(data)}>
+<td class="col-md-1">{data.id}</td>
+<td class="col-md-4"><a mv-evt mv-on-click="SELECT">{data.label}</a></td>
+<td class="col-md-1"><a mv-evt mv-on-click="REMOVE"><span class="glyphicon glyphicon-remove" aria-hidden="true"/></a></td>
 <td class="col-md-6"/>
 </tr>
 `, {
-    changed: (oldProps, newProps) => oldProps !== newProps
+    changed: (oldData, newData) => oldData !== newData
 });
 
 const list = new ModelView.Model.Collection([]);
-let selected = null;
+const notSelected = ModelView.Model.Value('', null, true).changed(false);
+let selected = 0;
+let selectedPrev = 0;
 
 const Main = new ModelView.View('view')
     .model(new ModelView.Model('model', {list: list}))
     .template(`{
-    view.model().get('list').mapTo(item => (<Row id={item.id} props={item}/>))
+    view.model().get('list').mapTo(item => (
+        <Row id={item.id.val()} data={item}/>
+    ))
 }`)
     .components({
         'Row': Row
     })
+    .context({
+        selected: (item) => {
+            let id = item.id.val();
+            if (selected === id)
+            {
+                return (new ModelView.Model.Value('danger', null, true)).changed(selected !== selectedPrev);
+            }
+            else if (selectedPrev === id)
+            {
+                return (new ModelView.Model.Value('', null, true)).changed(true);
+            }
+            return notSelected;
+        }
+    })
     .actions({
         'RUN': function() {
-            selected = null;
+            selected = selectedPrev = 0;
             list.set(buildData(1000));
             this.model().notify('list');
         },
         'RUN_LOTS': function() {
-            selected = null;
+            selected = selectedPrev = 0;
             list.set(buildData(10000));
             this.model().notify('list');
         },
@@ -83,50 +81,50 @@ const Main = new ModelView.View('view')
         'UPDATE': function() {
             const items = list.items(), l = items.length;
             for (let i = 0; i < l; i += 10) {
-                list.set(i, {id: items[i].id, label: items[i].label.set(items[i].label.val()+" !!!"), selected: items[i].selected});
+                list.set(i, {id: items[i].id, label: items[i].label.set(items[i].label.val()+" !!!")});
             }
             this.model().notify('list');
         },
         'CLEAR': function() {
-            selected = null;
+            selected = selectedPrev = 0;
             list.set([]);
             this.model().notify('list');
         },
         'SWAP_ROWS': function() {
             const items = list.items();
             if (items.length > 998) {
-                const t = items[1];
-                list.set(1, clone(items[998]));
-                list.set(998, clone(t));
+                const t1 = items[1], t2 = items[998];
+                selectedPrev = 0;
+                list.set(1, {id: t2.id.changed(true), label: t2.label.changed(true)});
+                list.set(998, {id: t1.id.changed(true), label: t1.label.changed(true)});
                 this.model().notify('list');
             }
         },
         'REMOVE': function(evt, el) {
-            const id = +el.dataset.id;
+            const id = +el.parentNode.parentNode.id;
             const idx = list.items().findIndex(item => item.id.val() === id);
             list.splice(idx, 1);
-            if (this.$renderdom.children[idx] === selected) selected = null;
+            if (id === selected) {selected = selectedPrev = 0;}
             this.model().notify('list');
         },
         'SELECT': function(evt, el) {
-            const id = +el.dataset.id;
-            let idx = list.items().findIndex(item => item.id.val() === id);
-            const tr = this.$renderdom.children[idx];
-            let item;
-            // framework idiomatically allows that the specifics of this action can be handled faster
-            // realistic use with no loss of generality
-            if (selected !== tr) {
-                tr.classList.add('danger');
-                item = list.items()[idx];
-                item.selected.set('danger', true);
-                if (selected) {
-                    id = +selected.id;
-                    idx = list.items().findIndex(item => item.id.val() === id);//findIndex(selected);
-                    item = list.items()[idx];
-                    item.selected.set('', true);
-                    selected.classList.remove('danger');
+            const id = +el.parentNode.parentNode.id;
+            const items = list.items();
+            if (selected !== id) {
+                let idx = items.findIndex(item => item.id.val() === id);
+                let item = items[idx];
+                list.set(idx, {id: item.id, label: item.label});
+                selectedPrev = selected;
+                selected = id;
+                if (selectedPrev) {
+                    idx = list.items().findIndex(item => item.id.val() === selectedPrev);
+                    item = items[idx];
+                    list.set(idx, {id: item.id, label: item.label});
                 }
-                selected = tr;
+                this.on('render', () => {
+                    selectedPrev = selected;
+                }, true);
+                this.model().notify('list');
             }
         }
     })
